@@ -9,6 +9,12 @@ erl_crash.dump
 /config/*.secret.exs
 .elixir_ls/
 
+# Frontend build artifacts (generated at build time, not source)
+assets/vendor/
+assets/node_modules/
+priv/static/assets/
+tsconfig.json
+
 # Design artifacts
 _paper
 _bmad
