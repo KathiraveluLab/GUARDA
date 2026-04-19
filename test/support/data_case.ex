@@ -18,8 +18,6 @@ defmodule Guarda.DataCase do
 
   using do
     quote do
-      alias Guarda.Repo
-
       import Ecto
       import Ecto.Changeset
       import Ecto.Query
@@ -27,17 +25,8 @@ defmodule Guarda.DataCase do
     end
   end
 
-  setup tags do
-    Guarda.DataCase.setup_sandbox(tags)
+  setup _tags do
     :ok
-  end
-
-  @doc """
-  Sets up the sandbox based on the test tags.
-  """
-  def setup_sandbox(tags) do
-    pid = Ecto.Adapters.SQL.Sandbox.start_owner!(Guarda.Repo, shared: not tags[:async])
-    on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
   end
 
   @doc """

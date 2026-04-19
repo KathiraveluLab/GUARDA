@@ -46,12 +46,13 @@ defmodule Guarda.Provider.Mysql do
   def init_provider(config) do
     db_name = Map.get(config, :database, "mysql")
     Logger.info("Initializing MySQL Provider actor for database: #{db_name}")
-    
+
     opts = Map.to_list(config)
 
     case MyXQL.start_link(opts) do
       {:ok, pid} ->
         {:ok, Map.put(config, :pid, pid)}
+
       {:error, reason} ->
         Logger.error("Failed to connect to MySQL database: #{db_name}")
         {:error, reason}
@@ -61,9 +62,9 @@ defmodule Guarda.Provider.Mysql do
   @impl Guarda.Provider
   def execute_query(sql_query, state) do
     Logger.info("Executing federated MySQL query: #{sql_query}")
-    
+
     pid = state.pid
-    
+
     try do
       result = MyXQL.query!(pid, sql_query, [])
       {:ok, %{status: 200, source: "mysql", data: %{columns: result.columns, rows: result.rows}}}
@@ -77,9 +78,11 @@ defmodule Guarda.Provider.Mysql do
   @impl Guarda.Provider
   def terminate_provider(state) do
     Logger.info("Terminating MySQL Provider actor (closing socket)")
+
     if pid = Map.get(state, :pid) do
       GenServer.stop(pid)
     end
+
     :ok
   end
 end

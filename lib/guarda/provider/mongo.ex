@@ -47,13 +47,14 @@ defmodule Guarda.Provider.Mongo do
   def init_provider(config) do
     database = Map.get(config, :database, "admin")
     url = Map.get(config, :url, "mongodb://localhost:27017/#{database}")
-    
+
     Logger.info("Initializing MongoDB Provider actor for URL: #{url}")
-    
+
     # Establish persistent pooling to the NoSQL registry
     case Mongo.start_link(url: url, name: :mongo_guarda_pool) do
       {:ok, pid} ->
         {:ok, Map.put(config, :pid, pid)}
+
       {:error, reason} ->
         Logger.error("Failed to connect to MongoDB cluster.")
         {:error, reason}
@@ -64,14 +65,14 @@ defmodule Guarda.Provider.Mongo do
   def execute_query(mongo_payload, _state) do
     collection = Map.get(mongo_payload, :collection, "records")
     filter = Map.get(mongo_payload, :filter, %{})
-    
+
     Logger.info("Executing federated Mongo find on [#{collection}]: #{inspect(filter)}")
-    
+
     try do
       # We route to the explicitly named Mongo connection pool
       cursor = Mongo.find(:mongo_guarda_pool, collection, filter)
       documents = Enum.to_list(cursor)
-      
+
       {:ok, %{status: 200, source: "mongodb", data: %{documents: documents}}}
     rescue
       e ->

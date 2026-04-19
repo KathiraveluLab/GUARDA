@@ -24,16 +24,17 @@ defmodule GuardaWeb.AuthPlug do
     else
       # Fallback to JWT handling if X-API-Key isn't present
       auth_header = get_req_header(conn, "authorization") |> List.first()
-      
+
       if auth_header && String.starts_with?(auth_header, "Bearer ") do
         token = String.replace(auth_header, "Bearer ", "")
-        
+
         # Real implementation using native Phoenix.Token (built on Plug.Crypto)
         # Prevents heavy external dependencies while ensuring strict cryptographic signatures
         case Phoenix.Token.verify(GuardaWeb.Endpoint, "guardian_auth", token, max_age: 86400) do
           {:ok, claims} ->
             Logger.debug("User authenticated via verified Phoenix.Token: #{inspect(claims)}")
             assign(conn, :current_user, claims)
+
           {:error, reason} ->
             Logger.warning("Token validation failed: #{inspect(reason)}")
             conn |> send_resp(:unauthorized, "Invalid or Expired Token") |> halt()
