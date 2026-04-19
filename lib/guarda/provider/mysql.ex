@@ -1,4 +1,7 @@
-defmodule Guarda.Provider.Postgres do
+defmodule Guarda.Provider.Mysql do
+  @moduledoc """
+  Provider worker for executing federated SQL queries securely against MySQL or MariaDB hosts.
+  """
   use GenServer
   @behaviour Guarda.Provider
 
@@ -41,47 +44,42 @@ defmodule Guarda.Provider.Postgres do
 
   @impl Guarda.Provider
   def init_provider(config) do
-    # Normalize to keyword list — Postgrex.start_link/1 requires it.
-    opts = if is_map(config), do: Map.to_list(config), else: config
-    db_name = Keyword.get(opts, :database, "postgres")
-    Logger.info("Initializing Postgres Provider actor for DB: #{db_name}")
+    db_name = Map.get(config, :database, "mysql")
+    Logger.info("Initializing MySQL Provider actor for database: #{db_name}")
+    
+    opts = Map.to_list(config)
 
-    case Postgrex.start_link(opts) do
+    case MyXQL.start_link(opts) do
       {:ok, pid} ->
-        {:ok, Enum.into(opts, %{pid: pid})}
-
+        {:ok, Map.put(config, :pid, pid)}
       {:error, reason} ->
-        Logger.error("Failed to connect to Postgres DB: #{db_name}")
+        Logger.error("Failed to connect to MySQL database: #{db_name}")
         {:error, reason}
     end
   end
 
   @impl Guarda.Provider
   def execute_query(sql_query, state) do
-    Logger.info("Executing federated SQL query: #{sql_query}")
-
+    Logger.info("Executing federated MySQL query: #{sql_query}")
+    
     pid = state.pid
-
+    
     try do
-      result = Postgrex.query!(pid, sql_query, [])
-
-      {:ok,
-       %{status: 200, source: "postgres", data: %{columns: result.columns, rows: result.rows}}}
+      result = MyXQL.query!(pid, sql_query, [])
+      {:ok, %{status: 200, source: "mysql", data: %{columns: result.columns, rows: result.rows}}}
     rescue
       e ->
-        Logger.error("SQL execution failed: #{inspect(e)}")
+        Logger.error("MySQL query execution failed: #{inspect(e)}")
         {:error, e}
     end
   end
 
   @impl Guarda.Provider
   def terminate_provider(state) do
-    Logger.info("Terminating Postgres Provider actor (closing socket)")
-
+    Logger.info("Terminating MySQL Provider actor (closing socket)")
     if pid = Map.get(state, :pid) do
       GenServer.stop(pid)
     end
-
     :ok
   end
 end

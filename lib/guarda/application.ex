@@ -9,7 +9,6 @@ defmodule Guarda.Application do
   def start(_type, _args) do
     children = [
       GuardaWeb.Telemetry,
-      Guarda.Repo,
       {DNSCluster, query: Application.get_env(:guarda, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Guarda.PubSub},
       # Start a worker by calling: Guarda.Worker.start_link(arg)
