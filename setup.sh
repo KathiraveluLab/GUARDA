@@ -27,7 +27,7 @@ if [ "$SKIP_INSTALL" != true ]; then
     # 2. Update and install basic dependencies
     echo "Updating package lists and installing system dependencies..."
     sudo apt update
-    sudo apt install -y wget unzip libssl-dev automake autoconf libncurses5-dev gcc make software-properties-common inotify-tools
+    sudo apt install -y wget unzip libssl-dev automake autoconf libncurses5-dev gcc make software-properties-common inotify-tools watchman
 
     # 3. Add RabbitMQ Erlang PPA
     echo "Adding RabbitMQ Erlang PPA..."
