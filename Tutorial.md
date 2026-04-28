@@ -40,6 +40,8 @@ curl -X POST http://localhost:4000/api/query \
 
 The **Command Center** (the dashboard you are currently viewing) provides a live view of the system health.
 
+![GUARDA Dashboard Overview](img/dashboard_overview.png)
+
 - **Active Data Providers**: Shows how many isolated connection processes are currently running.
 - **API Security Perimeter**: Shows the number of authenticated researchers/apps currently cached in high-speed memory.
 
@@ -64,5 +66,36 @@ docker-compose up -d
 # Run the integration tests
 mix test test/guarda/integration/federation_test.exs
 ```
+
+---
+
+## 6. Observability & Process Isolation
+
+A common question is: *"Why does my dashboard show 0 even when I am running tests or scripts?"*
+
+### The "Isolation" Principle
+In Elixir, every time you run a command like `mix test` or `mix run`, a **completely new and isolated BEAM instance** is started. 
+- Connection actors created in `mix test` exist only within that test's instance.
+- The dashboard running in `mix phx.server` is a different instance and cannot see the memory or processes of the test run.
+
+### How to Observe Live Metrics
+To see the dashboard metrics move, you must run your commands **inside the same instance** as the web server. 
+
+1. **Start the server with an interactive shell**:
+   ```bash
+   iex -S mix phx.server
+   ```
+
+2. **Run commands in the same terminal**:
+   While the server is running, you can type directly into the IEx prompt to manipulate the live state:
+   ```elixir
+   # This will immediately update the "API Security Perimeter" count
+   Guarda.APIKeys.register_key("demo_key", %{user: "Alice"})
+
+   # This will update the "Active Data Providers" count
+   Guarda.ProviderSupervisor.start_provider(Guarda.Provider.Postgres, [hostname: "localhost", database: "guarda_test_pg", username: "postgres", password: "postgres_password"])
+   ```
+
+---
 
 For more details, visit the [official repository](https://github.com/KathiraveluLab/GUARDA).
