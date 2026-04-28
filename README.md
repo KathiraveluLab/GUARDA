@@ -14,10 +14,10 @@
 
 ### 1. Prerequisites & Setup
 
-- **Required**: Elixir ~> 1.16 (built on Erlang/OTP 26+)
+- **Required**: Elixir ~> 1.17 (built on Erlang/OTP 26+)
 - Ensure standard build tools are available.
 
-The easiest way to install Elixir 1.16, update build tools, and fetch dependencies is to use the provided `setup.sh` script:
+The easiest way to install Elixir 1.17, update build tools, and fetch dependencies is to use the provided `setup.sh` script:
 
 ```bash
 chmod +x setup.sh
@@ -25,13 +25,13 @@ chmod +x setup.sh
 ```
 
 This script handles:
-- Installing Erlang/OTP 26 and Elixir 1.16.3.
+- Installing Erlang/OTP 26 and Elixir 1.17.1.
 - Updating `hex` and `rebar` archives.
 - Cleaning and fetching all project dependencies.
 
 For developers using [asdf](https://asdf-vm.com/), you can manually run:
 ```bash
-asdf install elixir 1.16.3-otp-26
+asdf install elixir 1.17.1-otp-26
 mix local.hex --force && mix local.rebar --force
 mix deps.get
 ```

@@ -5,7 +5,7 @@ set -e
 
 echo "--- GUARDA System Setup Script ---"
 
-DESIRED_VERSION="1.16.3"
+DESIRED_VERSION="1.17.1"
 
 # Check if Elixir is already installed and matches the desired version
 if command -v elixir >/dev/null 2>&1; then
@@ -38,7 +38,7 @@ if [ "$SKIP_INSTALL" != true ]; then
     echo "Installing Erlang/OTP..."
     sudo apt install -y erlang-base erlang-dev erlang-public-key erlang-ssl erlang-crypto erlang-syntax-tools erlang-asn1 erlang-inets erlang-os-mon erlang-parsetools erlang-runtime-tools erlang-xmerl
 
-    # 5. Download and Install Elixir 1.16.3
+    # 5. Download and Install Elixir 1.17.1
     echo "Downloading Elixir $DESIRED_VERSION..."
     ELIXIR_ZIP="elixir-otp-26.zip"
     wget https://github.com/elixir-lang/elixir/releases/download/v$DESIRED_VERSION/$ELIXIR_ZIP
