@@ -12,16 +12,35 @@
 
 ## Quick Start
 
-### 1. Prerequisites
-- **Elixir ~> 1.15** (built on Erlang/OTP 25+)
+### 1. Prerequisites & Setup
+
+- **Required**: Elixir ~> 1.16 (built on Erlang/OTP 26+)
 - Ensure standard build tools are available.
+
+The easiest way to install Elixir 1.16, update build tools, and fetch dependencies is to use the provided `setup.sh` script:
+
+```bash
+chmod +x setup.sh
+./setup.sh
+```
+
+This script handles:
+- Installing Erlang/OTP 26 and Elixir 1.16.3.
+- Updating `hex` and `rebar` archives.
+- Cleaning and fetching all project dependencies.
+
+For developers using [asdf](https://asdf-vm.com/), you can manually run:
+```bash
+asdf install elixir 1.16.3-otp-26
+mix local.hex --force && mix local.rebar --force
+mix deps.get
+```
 
 ### 2. Deployment
 
-```bash
-# Fetch and fully compile the Hex dependencies
-mix deps.get
+After running the setup script, you can boot the gateway:
 
+```bash
 # (Optional) Verify the cryptographic formatting and test suite
 mix precommit
 
