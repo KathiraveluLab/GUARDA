@@ -43,6 +43,14 @@ defmodule GuardaWeb.Endpoint do
   plug Plug.RequestId
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
 
+  # CORS policy — configurable allowed origins
+  plug Corsica,
+    origins: Application.compile_env(:guarda, :cors_origins, ["http://localhost:4000"]),
+    allow_headers: ["authorization", "content-type", "x-api-key"],
+    allow_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_credentials: true,
+    max_age: 86_400
+
   plug Plug.Parsers,
     parsers: [:urlencoded, :multipart, :json],
     pass: ["*/*"],

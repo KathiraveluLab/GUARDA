@@ -7,8 +7,19 @@ defmodule Guarda.Provider.Http do
   # Client API
 
   def start_link(config) do
-    # We could name the process or register it via a Registry for dynamic supervision
-    GenServer.start_link(__MODULE__, config)
+    logical_name =
+      cond do
+        is_map(config) -> Map.get(config, :logical_name)
+        is_list(config) -> Keyword.get(config, :logical_name)
+        true -> nil
+      end
+
+    case logical_name do
+      nil -> GenServer.start_link(__MODULE__, config)
+      name ->
+        meta = %{module: __MODULE__, started_at: DateTime.utc_now()}
+        GenServer.start_link(__MODULE__, config, name: {:via, Registry, {Guarda.ProviderRegistry, name, meta}})
+    end
   end
 
   def execute(pid, endpoint_path) do
