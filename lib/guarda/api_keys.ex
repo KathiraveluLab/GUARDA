@@ -81,15 +81,18 @@ defmodule Guarda.APIKeys do
 
   @impl true
   def handle_call({:register_key, key, user_claims, org_id}, _from, state) do
+    label = if is_map(user_claims), do: Map.get(user_claims, "label") || Map.get(user_claims, :label), else: nil
+    user_id = if is_map(user_claims), do: Map.get(user_claims, "user_id") || Map.get(user_claims, :user_id, "unknown"), else: user_claims
+
     entry = %{
       claims: user_claims,
       org_id: org_id,
-      label: Map.get(user_claims, "label", nil),
+      label: label,
       created_at: DateTime.utc_now()
     }
 
     :ets.insert(@table_name, {key, entry})
-    Logger.info("API key registered for user: #{inspect(Map.get(user_claims, "user_id", "unknown"))}")
+    Logger.info("API key registered for user: #{inspect(user_id)}")
 
     # Broadcast to other nodes for sync
     Phoenix.PubSub.broadcast(Guarda.PubSub, @sync_topic, {:key_registered, key, entry, node()})

@@ -7,12 +7,30 @@ defmodule Guarda.ConfigHelper do
   from arbitrary user input.
   """
 
-  @allowed_keys ~w(
-    hostname host port username password database
-    url pool_size ssl socket_dir timeout connect_timeout
-    queue_target queue_interval name socket
-    base_url headers method auth_source
-  )
+  # Pre-built mapping from string keys to atom keys.
+  # Using atom literals here guarantees they exist at compile time.
+  @allowed_atoms %{
+    "hostname" => :hostname,
+    "host" => :host,
+    "port" => :port,
+    "username" => :username,
+    "password" => :password,
+    "database" => :database,
+    "url" => :url,
+    "pool_size" => :pool_size,
+    "ssl" => :ssl,
+    "socket_dir" => :socket_dir,
+    "timeout" => :timeout,
+    "connect_timeout" => :connect_timeout,
+    "name" => :name,
+    "socket" => :socket,
+    "base_url" => :base_url,
+    "headers" => :headers,
+    "method" => :method,
+    "auth_source" => :auth_source,
+    "queue_target" => :queue_target,
+    "queue_interval" => :queue_interval
+  }
 
   @doc """
   Converts a string-keyed map from JSON into an atom-keyed map,
@@ -21,12 +39,10 @@ defmodule Guarda.ConfigHelper do
   Unknown keys are silently dropped to prevent atom table exhaustion.
   """
   def safe_atomize_config(config) when is_map(config) do
-    allowed_atoms = Map.new(@allowed_keys, fn k -> {k, String.to_existing_atom(k)} end)
-
     config
     |> Enum.reduce(%{}, fn
       {k, v}, acc when is_binary(k) ->
-        case Map.get(allowed_atoms, k) do
+        case Map.get(@allowed_atoms, k) do
           nil -> acc
           atom_key -> Map.put(acc, atom_key, v)
         end

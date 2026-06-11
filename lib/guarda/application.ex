@@ -5,8 +5,11 @@ defmodule Guarda.Application do
 
   @impl true
   def start(_type, _args) do
-    # Create rate limit ETS table early to prevent concurrent request race conditions
-    :ets.new(:guarda_rate_limits, [:bag, :public, :named_table, write_concurrency: true])
+    # Create rate limit ETS table early to prevent concurrent request race conditions.
+    # Guard against restarts or test re-runs where the table may already exist.
+    if :ets.whereis(:guarda_rate_limits) == :undefined do
+      :ets.new(:guarda_rate_limits, [:bag, :public, :named_table, write_concurrency: true])
+    end
 
     children = [
       GuardaWeb.Telemetry,

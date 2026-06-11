@@ -156,22 +156,26 @@ defmodule Guarda.AsyncQuery do
 
   defp deliver_webhook(nil, _query_id, _status, _data), do: :ok
   defp deliver_webhook(callback_url, query_id, status, data) do
-    payload = Jason.encode!(%{
+    case Jason.encode(%{
       query_id: query_id,
       status: to_string(status),
       data: data,
       completed_at: DateTime.utc_now() |> DateTime.to_iso8601()
-    })
+    }) do
+      {:ok, payload} ->
+        case Req.post(callback_url, body: payload, headers: [{"content-type", "application/json"}]) do
+          {:ok, %{status: status_code}} when status_code in 200..299 ->
+            Logger.info("Webhook delivered for query #{query_id}: #{status_code}")
 
-    case Req.post(callback_url, body: payload, headers: [{"content-type", "application/json"}]) do
-      {:ok, %{status: status_code}} when status_code in 200..299 ->
-        Logger.info("Webhook delivered for query #{query_id}: #{status_code}")
+          {:ok, %{status: status_code}} ->
+            Logger.warning("Webhook delivery failed for query #{query_id}: HTTP #{status_code}")
 
-      {:ok, %{status: status_code}} ->
-        Logger.warning("Webhook delivery failed for query #{query_id}: HTTP #{status_code}")
+          {:error, reason} ->
+            Logger.error("Webhook delivery error for query #{query_id}: #{inspect(reason)}")
+        end
 
       {:error, reason} ->
-        Logger.error("Webhook delivery error for query #{query_id}: #{inspect(reason)}")
+        Logger.error("Failed to encode webhook payload for query #{query_id}: #{inspect(reason)}")
     end
   end
 

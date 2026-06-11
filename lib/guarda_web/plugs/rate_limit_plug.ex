@@ -79,9 +79,17 @@ defmodule GuardaWeb.RateLimitPlug do
   end
 
   defp cleanup_expired(client_key, window_start) do
-    # Delete entries older than the window
+    # Delete entries older than the window for the current client
     :ets.select_delete(@table_name, [
       {{client_key, :"$1"}, [{:<, :"$1", window_start}], [true]}
     ])
+
+    # Periodically sweep all expired entries to prevent memory leaks from inactive clients.
+    # Runs roughly once every 100 requests to amortize cost.
+    if :rand.uniform(100) == 1 do
+      :ets.select_delete(@table_name, [
+        {{:_, :"$1"}, [{:<, :"$1", window_start}], [true]}
+      ])
+    end
   end
 end

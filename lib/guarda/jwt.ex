@@ -65,7 +65,6 @@ defmodule Guarda.JWT do
 
   defp secret_key do
     GuardaWeb.Endpoint.config(:secret_key_base)
-    |> binary_part(0, 32)
   end
 
   defp base64url_encode(data) do

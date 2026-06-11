@@ -43,9 +43,11 @@ defmodule Guarda.NLQuery do
   defp call_llm(url, key, body) do
     headers = [{"authorization", "Bearer #{key}"}, {"content-type", "application/json"}]
     case Req.post(url, body: Jason.encode!(body), headers: headers) do
-      {:ok, %{status: 200, body: resp}} ->
+      {:ok, %{status: 200, body: resp}} when is_map(resp) ->
         content = resp |> Map.get("choices", []) |> List.first(%{}) |> get_in(["message", "content"])
         if content, do: {:ok, content |> String.replace(~r/```sql\s*/i, "") |> String.replace(~r/```\s*/, "") |> String.trim()}, else: {:error, "No LLM response"}
+      {:ok, %{status: 200, body: _}} ->
+        {:error, "Unexpected LLM response format"}
       {:ok, %{status: s}} -> {:error, "LLM API HTTP #{s}"}
       {:error, r} -> {:error, "LLM API error: #{inspect(r)}"}
     end

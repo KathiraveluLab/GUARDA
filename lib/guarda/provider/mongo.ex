@@ -82,7 +82,7 @@ defmodule Guarda.Provider.Mongo do
   def execute_query(mongo_payload, state) do
     collection = Map.get(mongo_payload, :collection, "records")
     filter = Map.get(mongo_payload, :filter, %{})
-    limit = Map.get(mongo_payload, :limit, Map.get(state, :query_limit, @default_limit))
+    limit = Map.get(mongo_payload, :limit) || Map.get(state, :query_limit) || @default_limit
 
     Logger.info("Executing federated Mongo find on [#{collection}]: #{inspect(filter)} (limit: #{limit})")
 

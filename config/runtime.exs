@@ -20,6 +20,11 @@ if System.get_env("PHX_SERVER") do
   config :guarda, GuardaWeb.Endpoint, server: true
 end
 
+# Runtime-configurable max provider actors (defaults to compile-time value in config.exs)
+if max_providers = System.get_env("MAX_PROVIDERS") do
+  config :guarda, max_providers: String.to_integer(max_providers)
+end
+
 config :guarda, GuardaWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 

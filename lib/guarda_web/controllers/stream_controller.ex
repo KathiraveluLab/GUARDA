@@ -49,32 +49,34 @@ defmodule GuardaWeb.StreamController do
               # Stream header
               {:ok, conn} = chunk(conn, Jason.encode!(%{type: "header", columns: columns}) <> "\n")
 
-              # Stream rows in batches
-              rows
-              |> Enum.chunk_every(batch_size)
-              |> Enum.reduce(conn, fn batch, conn ->
-                line = Jason.encode!(%{type: "data", rows: batch}) <> "\n"
-                case chunk(conn, line) do
-                  {:ok, conn} -> conn
-                  {:error, _} -> conn
-                end
-              end)
+              # Stream rows in batches, halt immediately on client disconnect
+              conn =
+                rows
+                |> Enum.chunk_every(batch_size)
+                |> Enum.reduce_while(conn, fn batch, conn ->
+                  line = Jason.encode!(%{type: "data", rows: batch}) <> "\n"
+                  case chunk(conn, line) do
+                    {:ok, conn} -> {:cont, conn}
+                    {:error, _} -> {:halt, conn}
+                  end
+                end)
 
               # Stream footer
               chunk(conn, Jason.encode!(%{type: "footer", total: length(rows)}) <> "\n")
               conn
 
             {:ok, %{data: %{documents: docs}}} ->
-              # MongoDB results
-              docs
-              |> Enum.chunk_every(batch_size)
-              |> Enum.reduce(conn, fn batch, conn ->
-                line = Jason.encode!(%{type: "data", documents: batch}) <> "\n"
-                case chunk(conn, line) do
-                  {:ok, conn} -> conn
-                  {:error, _} -> conn
-                end
-              end)
+              # MongoDB results, halt immediately on client disconnect
+              conn =
+                docs
+                |> Enum.chunk_every(batch_size)
+                |> Enum.reduce_while(conn, fn batch, conn ->
+                  line = Jason.encode!(%{type: "data", documents: batch}) <> "\n"
+                  case chunk(conn, line) do
+                    {:ok, conn} -> {:cont, conn}
+                    {:error, _} -> {:halt, conn}
+                  end
+                end)
 
               chunk(conn, Jason.encode!(%{type: "footer", total: length(docs)}) <> "\n")
               conn

@@ -6,15 +6,14 @@ defmodule Guarda.ProviderSupervisor do
   """
   use DynamicSupervisor
 
-  @max_children Application.compile_env(:guarda, :max_providers, 100)
-
   def start_link(init_arg) do
     DynamicSupervisor.start_link(__MODULE__, init_arg, name: __MODULE__)
   end
 
   @impl true
   def init(_init_arg) do
-    DynamicSupervisor.init(strategy: :one_for_one, max_children: @max_children)
+    max_children = Application.get_env(:guarda, :max_providers, 100)
+    DynamicSupervisor.init(strategy: :one_for_one, max_children: max_children)
   end
 
   @doc """

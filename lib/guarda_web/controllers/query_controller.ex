@@ -125,6 +125,12 @@ defmodule GuardaWeb.QueryController do
   @doc """
   Checks that a SQL query is safe to execute (SELECT only).
   Rejects DDL, DML, and other potentially destructive statements.
+
+  Note: This is a defense-in-depth measure. It may produce false positives
+  when dangerous keywords appear inside string literals or comments (e.g.,
+  `WHERE title LIKE '%create%'`). It does not guard against database-specific
+  functions (e.g., `pg_read_file`, `LOAD_FILE`). Always enforce least-privilege
+  permissions on the database user configured for each provider.
   """
   def safe_query?(sql) when is_binary(sql) do
     normalized = sql |> String.trim() |> String.upcase()
