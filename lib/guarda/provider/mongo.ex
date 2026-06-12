@@ -8,10 +8,25 @@ defmodule Guarda.Provider.Mongo do
 
   require Logger
 
+  @default_limit 1000
+  @default_pool_size 5
+
   # Client API
 
   def start_link(config) do
-    GenServer.start_link(__MODULE__, config)
+    logical_name =
+      cond do
+        is_map(config) -> Map.get(config, :logical_name)
+        is_list(config) -> Keyword.get(config, :logical_name)
+        true -> nil
+      end
+
+    case logical_name do
+      nil -> GenServer.start_link(__MODULE__, config)
+      name ->
+        meta = %{module: __MODULE__, started_at: DateTime.utc_now()}
+        GenServer.start_link(__MODULE__, config, name: {:via, Registry, {Guarda.ProviderRegistry, name, meta}})
+    end
   end
 
   def execute(pid, mongo_payload) do
@@ -47,11 +62,13 @@ defmodule Guarda.Provider.Mongo do
   def init_provider(config) do
     database = Map.get(config, :database, "admin")
     url = Map.get(config, :url, "mongodb://localhost:27017/#{database}")
+    pool_size = Map.get(config, :pool_size, @default_pool_size)
 
     Logger.info("Initializing MongoDB Provider actor for URL: #{url}")
 
-    # Establish persistent pooling to the NoSQL registry
-    case Mongo.start_link(url: url, name: :mongo_guarda_pool) do
+    # Use the returned pid directly instead of a hardcoded global name.
+    # This prevents pool name conflicts when multiple Mongo providers are active.
+    case Mongo.start_link(url: url, pool_size: pool_size) do
       {:ok, pid} ->
         {:ok, Map.put(config, :pid, pid)}
 
@@ -62,18 +79,32 @@ defmodule Guarda.Provider.Mongo do
   end
 
   @impl Guarda.Provider
-  def execute_query(mongo_payload, _state) do
+  def execute_query(mongo_payload, state) do
     collection = Map.get(mongo_payload, :collection, "records")
     filter = Map.get(mongo_payload, :filter, %{})
+    limit = Map.get(mongo_payload, :limit) || Map.get(state, :query_limit) || @default_limit
 
-    Logger.info("Executing federated Mongo find on [#{collection}]: #{inspect(filter)}")
+    Logger.info("Executing federated Mongo find on [#{collection}]: #{inspect(filter)} (limit: #{limit})")
 
     try do
-      # We route to the explicitly named Mongo connection pool
-      cursor = Mongo.find(:mongo_guarda_pool, collection, filter)
-      documents = Enum.to_list(cursor)
+      # Use the process pid from state instead of the hardcoded global pool name
+      cursor = Mongo.find(state.pid, collection, filter, limit: limit)
 
-      {:ok, %{status: 200, source: "mongodb", data: %{documents: documents}}}
+      # Use Enum.take instead of Enum.to_list to prevent unbounded memory usage
+      documents = Enum.take(cursor, limit)
+      total_fetched = length(documents)
+      truncated = total_fetched >= limit
+
+      {:ok, %{
+        status: 200,
+        source: "mongodb",
+        data: %{
+          documents: documents,
+          count: total_fetched,
+          truncated: truncated,
+          limit: limit
+        }
+      }}
     rescue
       e ->
         Logger.error("MongoDB execution failed: #{inspect(e)}")
@@ -82,8 +113,17 @@ defmodule Guarda.Provider.Mongo do
   end
 
   @impl Guarda.Provider
-  def terminate_provider(_state) do
+  def terminate_provider(state) do
     Logger.info("Terminating MongoDB Provider actor pool.")
+
+    if pid = Map.get(state, :pid) do
+      try do
+        GenServer.stop(pid)
+      catch
+        :exit, _ -> :ok
+      end
+    end
+
     :ok
   end
 end

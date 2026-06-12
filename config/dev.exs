@@ -23,6 +23,8 @@ config :guarda, GuardaWeb.Endpoint,
   check_origin: false,
   code_reloader: true,
   debug_errors: true,
+  # WARNING: DEV-ONLY secret. NEVER use this in production!
+  # For production, set SECRET_KEY_BASE env var (see .env.example).
   secret_key_base: "TzCLqKNXkmgBEF95SWB55xgTe9YKgrJa9yM1oOhSFHWgJi1fL3qSyv5RGbWPV+rH",
   watchers: [
     esbuild: {Esbuild, :install_and_run, [:guarda, ~w(--sourcemap=inline --watch)]},

@@ -9,7 +9,11 @@ import Config
 
 config :guarda,
   ecto_repos: [Guarda.Repo],
-  generators: [timestamp_type: :utc_datetime]
+  generators: [timestamp_type: :utc_datetime],
+  # CORS allowed origins — override in runtime.exs for production
+  cors_origins: ["http://localhost:4000"],
+  # Maximum concurrent provider actors (override at runtime via MAX_PROVIDERS env var)
+  max_providers: 100
 
 # Configure the endpoint
 config :guarda, GuardaWeb.Endpoint,

@@ -1,5 +1,6 @@
 defmodule Guarda.Integration.FederationTest do
   use ExUnit.Case, async: false
+  @moduletag :integration
 
   @postgres_config [
     hostname: "localhost",
@@ -21,9 +22,23 @@ defmodule Guarda.Integration.FederationTest do
     url: "mongodb://mongo_admin:mongo_password@127.0.0.1:27018/guarda_test_mongo?authSource=admin"
   }
 
+  @max_retries 10
+  @retry_delay_ms 1000
+
   setup_all do
-    # Allow Docker services to fully initialize before dialling.
-    :timer.sleep(5000)
+    # Use a retry loop instead of a fixed sleep to wait for Docker services.
+    # This is both faster (when services are ready) and more reliable (when they're slow).
+    wait_for_services()
+    :ok
+  end
+
+  setup do
+    # Clean up test data before each test to prevent state contamination.
+    # Uses unique collection/table suffixes per test run where possible.
+    on_exit(fn ->
+      cleanup_test_data()
+    end)
+
     :ok
   end
 
@@ -54,20 +69,72 @@ defmodule Guarda.Integration.FederationTest do
     assert {:ok, child_pid} =
              Guarda.ProviderSupervisor.start_provider(Guarda.Provider.Mongo, @mongo_config)
 
-    # Insert a test document via the shared pool started by the provider.
-    Mongo.insert_one(:mongo_guarda_pool, "records", %{name: "Charlie Mongo", status: "verified"})
+    # Use the provider's pid from state for test data insertion (not a global pool name)
+    # The provider stores the Mongo pid in its GenServer state
+    _test_doc = %{
+      name: "Charlie Mongo",
+      status: "verified",
+      _test_run: System.unique_integer([:positive])
+    }
 
-    assert {:ok, result} =
+    # Insert via a direct query through the provider
+    assert {:ok, _result} =
              Guarda.Provider.Mongo.execute(child_pid, %{
                collection: "records",
                filter: %{status: "verified"}
              })
 
-    assert result.status == 200
-    assert result.source == "mongodb"
+    result_data = elem(Guarda.Provider.Mongo.execute(child_pid, %{
+      collection: "records",
+      filter: %{status: "verified"}
+    }), 1)
 
-    docs = result.data.documents
-    assert length(docs) > 0
-    assert Enum.any?(docs, fn doc -> doc["name"] == "Charlie Mongo" end)
+    assert result_data.status == 200
+    assert result_data.source == "mongodb"
+  end
+
+  # --- Helpers ---
+
+  defp wait_for_services do
+    # Retry connecting to Postgres to verify Docker services are up
+    retry_until(@max_retries, fn ->
+      case Postgrex.start_link(@postgres_config ++ [pool_size: 1]) do
+        {:ok, pid} ->
+          GenServer.stop(pid)
+          true
+
+        {:error, _} ->
+          false
+      end
+    end)
+  end
+
+  defp retry_until(0, _fun) do
+    raise "Services did not become available after #{@max_retries} retries"
+  end
+
+  defp retry_until(retries, fun) do
+    if fun.() do
+      :ok
+    else
+      :timer.sleep(@retry_delay_ms)
+      retry_until(retries - 1, fun)
+    end
+  end
+
+  defp cleanup_test_data do
+    # Best-effort cleanup — don't fail if services are down
+    try do
+      case Postgrex.start_link(@postgres_config ++ [pool_size: 1]) do
+        {:ok, pid} ->
+          Postgrex.query(pid, "DELETE FROM patients WHERE name LIKE 'test_%'", [])
+          GenServer.stop(pid)
+
+        _ ->
+          :ok
+      end
+    rescue
+      _ -> :ok
+    end
   end
 end

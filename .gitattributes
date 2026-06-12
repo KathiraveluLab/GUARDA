@@ -1,0 +1,10 @@
+# Enforce LF line endings for all text files across Windows, Mac, and Linux/WSL
+* text=auto eol=lf
+
+# Explicitly mark binary files so they are not normalized
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary

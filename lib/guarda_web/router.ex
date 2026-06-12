@@ -12,6 +12,12 @@ defmodule GuardaWeb.Router do
 
   pipeline :api do
     plug :accepts, ["json"]
+    plug GuardaWeb.RateLimitPlug, limit: 60, window_ms: 60_000
+    plug GuardaWeb.AuthPlug
+  end
+
+  pipeline :api_public do
+    plug :accepts, ["json"]
   end
 
   scope "/", GuardaWeb do
@@ -22,18 +28,42 @@ defmodule GuardaWeb.Router do
     end
   end
 
-  # Other scopes may use custom stacks.
-  # scope "/api", GuardaWeb do
-  #   pipe_through :api
-  # end
+  # Public endpoints (no authentication required)
+  scope "/api", GuardaWeb do
+    pipe_through :api_public
 
-  # Enable LiveDashboard and Swoosh mailbox preview in development
+    get "/health", HealthController, :index
+  end
+
+  # Authenticated API endpoints
+  scope "/api", GuardaWeb do
+    pipe_through :api
+
+    # Core query execution
+    post "/query", QueryController, :execute
+
+    # Streaming results (NDJSON)
+    post "/query/stream", StreamController, :stream
+
+    # Natural language to SQL
+    post "/query/natural", NLQueryController, :translate
+
+    # Federated cross-provider JOIN
+    post "/query/federated", FederatedController, :join
+
+    # Async query with webhook callback
+    post "/query/async", AsyncQueryController, :submit
+    get "/query/:id/status", AsyncQueryController, :status
+
+    # Schema introspection
+    post "/schema", SchemaController, :introspect
+
+    # Audit log
+    get "/audit", AuditController, :index
+    get "/audit/stats", AuditController, :stats
+  end
+
   if Application.compile_env(:guarda, :dev_routes) do
-    # If you want to use the LiveDashboard in production, you should put
-    # it behind authentication and allow only admins to access it.
-    # If your application does not have an admins-only section yet,
-    # you can use Plug.BasicAuth to set up some basic authentication
-    # as long as you are also using SSL (which you should anyway).
     import Phoenix.LiveDashboard.Router
 
     scope "/dev" do
